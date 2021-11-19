@@ -51,6 +51,15 @@ class UserController extends BaseController
             $input["user_photo"] = Storage::disk('public')->url($image_uploaded_path);
         }
 
+        if (isset($request->status)) {
+            $input["status"] = 0;
+            if ($input['status'] == 'Active') {
+                 $input["status"] = 1;
+            }
+        }
+
+        $input['password'] = bcrypt($input['password']);
+
         $User = User::create($input);
 
         return $this->sendResponse(new UserResource($User), 'User created successfully.');
@@ -116,31 +125,6 @@ class UserController extends BaseController
     public function update(Request $request, User $User)
     {
         $input = $request->all();
-        $User = $this->userDataUpdate($request, $input, $User);
-        return $this->sendResponse(new UserResource($User), 'User updated successfully.');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(User $User)
-    {
-        $User->delete();
-        return $this->sendResponse([], 'User deleted successfully.');
-    }
-
-    public function ProfileUpdate(Request $request)
-    {
-        $User = Auth::user();
-        $input = $request->all();
-        $User = $this->userDataUpdate($request, $input, $User);
-        return $this->sendResponse(new UserResource($User), 'Profile updated successfully.');
-    }
-
-    public function userDataUpdate( $request, $input , $User ){
 
         $validator = Validator::make($input, $this->rules($request, $User->id));
 
@@ -161,7 +145,7 @@ class UserController extends BaseController
         }
 
         if (isset($request->mobile_number)) {
-            $User->mobile_number = $input['mobile_number '];
+            $User->mobile_number = $input['mobile_number'];
         }
 
         if (isset($request->hobbies) &&  count($request->hobbies) > 0) {
@@ -169,12 +153,12 @@ class UserController extends BaseController
         }
 
         if (isset($request->password)) {
-            $User->password = $input['password'];
+            $User->password = bcrypt($input['password']);
         }
 
         if (isset($request->status)) {
             $User->status = 0;
-            if( $input['status'] == 'active' ){
+            if ($input['status'] == 'Active') {
                 $User->status = 1;
             }
         }
@@ -185,10 +169,75 @@ class UserController extends BaseController
             $image_uploaded_path = $image->store('users', 'public');
             $User->user_photo = Storage::disk('public')->url($image_uploaded_path);
         }
-
         $User->save();
 
-        return $User;
+        return $this->sendResponse(new UserResource($User), 'User updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(User $User)
+    {
+        $User->delete();
+        return $this->sendResponse([], 'User deleted successfully.');
+    }
+
+    public function ProfileUpdate(Request $request)
+    {
+        $User = Auth::user();
+
+        $input = $request->all();
+
+
+        $validator = Validator::make($input, $this->rules($request, $User->id));
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+
+        if (isset($request->first_name)) {
+            $User->first_name = $input['first_name'];
+        }
+
+        if (isset($request->last_name)) {
+            $User->last_name = $input['last_name'];
+        }
+
+        if (isset($request->email)) {
+            $User->email = $input['email'];
+        }
+
+        if (isset($request->mobile_number)) {
+            $User->mobile_number = $input['mobile_number'];
+        }
+
+        if (isset($request->hobbies) &&  count($request->hobbies) > 0) {
+            $User->hobbies = $input['hobbies'];
+        }
+
+        if (isset($request->password)) {
+            $User->password = bcrypt($input['password']);
+        }
+
+        if (isset($request->status)) {
+            $User->status = 0;
+            if ($input['status'] == 'Active') {
+                $User->status = 1;
+            }
+        }
+
+        //image upload
+        if ($request->file('user_photo')) {
+            $image = $request->file('user_photo');
+            $image_uploaded_path = $image->store('users', 'public');
+            $User->user_photo = Storage::disk('public')->url($image_uploaded_path);
+        }
+        $User->save();
+        return $this->sendResponse(new UserResource($User), 'Profile updated successfully.');
     }
 
 }
