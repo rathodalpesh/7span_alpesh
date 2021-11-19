@@ -20,6 +20,10 @@ use App\Http\Controllers\API\UserController;
 Route::post('register', [RegisterController::class, 'register']);
 Route::post('login', [RegisterController::class, 'login']);
 
-Route::middleware('auth:api')->group(function () {
+Route::group(['middleware' => ['auth:api', 'admin_accessible']], function () {
     Route::resource('users', UserController::class);
+});
+
+Route::group(['middleware' => ['auth:api', 'user_accessible']], function () {
+    Route::post('users_profile_update', [UserController::class, 'ProfileUpdate']);
 });

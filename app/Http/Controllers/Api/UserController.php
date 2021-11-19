@@ -7,6 +7,7 @@ use App\Http\Controllers\API\BaseController as BaseController;
 use App\Models\User;
 use Validator;
 use App\Http\Resources\User as UserResource;
+use Illuminate\Support\Facades\Auth;
 use Storage;
 
 class UserController extends BaseController
@@ -67,6 +68,7 @@ class UserController extends BaseController
             'last_name' => 'sometimes|required',
             'user_photo' => 'image:jpeg,png,jpg,gif,svg|max:2048',
             'mobile_number' => 'sometimes|required|regex:/^([0-9\s\-\+\(\)]*)$/|min:10',
+            'status' => 'in:Active,Inactive',
         ];
 
         if ($id != "" ){
@@ -114,45 +116,7 @@ class UserController extends BaseController
     public function update(Request $request, User $User)
     {
         $input = $request->all();
-
-        $validator = Validator::make($input, $this->rules($request, $User->id ));
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors());
-        }
-
-        if (isset($input['first_name'])) {
-            $User->first_name = $input['first_name'];
-        }
-
-        if (isset($input['last_name'])) {
-            $User->last_name = $input['last_name'];
-        }
-
-        if (isset($input['email'])) {
-            $User->email = $input['email'];
-        }
-
-        if (isset($input['mobile_number'])) {
-            $User->mobile_number = $input['mobile_number'];
-        }
-
-        if( count($input['hobbies']) > 0 ){
-            $User->hobbies = $input['hobbies'];
-        }
-
-        if (isset($input['password'])) {
-            $User->password = $input['password'];
-        }
-
-        //image upload
-        if ($request->file('user_photo')) {
-            $image = $request->file('user_photo');
-            $image_uploaded_path = $image->store('users', 'public');
-            $User->user_photo = Storage::disk('public')->url($image_uploaded_path);
-        }
-
-        $User->save();
+        $User = $this->userDataUpdate($request, $input, $User);
         return $this->sendResponse(new UserResource($User), 'User updated successfully.');
     }
 
@@ -167,4 +131,64 @@ class UserController extends BaseController
         $User->delete();
         return $this->sendResponse([], 'User deleted successfully.');
     }
+
+    public function ProfileUpdate(Request $request)
+    {
+        $User = Auth::user();
+        $input = $request->all();
+        $User = $this->userDataUpdate($request, $input, $User);
+        return $this->sendResponse(new UserResource($User), 'Profile updated successfully.');
+    }
+
+    public function userDataUpdate( $request, $input , $User ){
+
+        $validator = Validator::make($input, $this->rules($request, $User->id));
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+
+        if (isset($request->first_name)) {
+            $User->first_name = $input['first_name'];
+        }
+
+        if (isset($request->last_name)) {
+            $User->last_name = $input['last_name'];
+        }
+
+        if (isset($request->email)) {
+            $User->email = $input['email'];
+        }
+
+        if (isset($request->mobile_number)) {
+            $User->mobile_number = $input['mobile_number '];
+        }
+
+        if (isset($request->hobbies) &&  count($request->hobbies) > 0) {
+            $User->hobbies = $input['hobbies'];
+        }
+
+        if (isset($request->password)) {
+            $User->password = $input['password'];
+        }
+
+        if (isset($request->status)) {
+            $User->status = 0;
+            if( $input['status'] == 'active' ){
+                $User->status = 1;
+            }
+        }
+
+        //image upload
+        if ($request->file('user_photo')) {
+            $image = $request->file('user_photo');
+            $image_uploaded_path = $image->store('users', 'public');
+            $User->user_photo = Storage::disk('public')->url($image_uploaded_path);
+        }
+
+        $User->save();
+
+        return $User;
+    }
+
 }
